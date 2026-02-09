@@ -26,3 +26,7 @@ chmod +x scripts/build.sh
 ```
 
 ## how to run
+
+```bash
+./build/cpp_udp_secs_receiver
+```
