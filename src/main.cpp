@@ -53,10 +53,10 @@ int main(int argc, char* argv[]) {
         worker_pool.start();
         
         // UDP 수신 시작 (별도 스레드)
-        std::thread udp_thread([&config, &queue]() {
-            secs::UdpReceiver receiver(config, queue);
-            receiver.start();
-        });
+        secs::UdpReceiver receiver(config, queue);
+		std::thread udp_thread([&receiver]() {
+    		receiver.start();
+		});
         
         spdlog::info("SECS UDP Receiver 시작 완료");
  		spdlog::info(separator);
