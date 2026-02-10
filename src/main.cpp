@@ -70,9 +70,14 @@ int main(int argc, char* argv[]) {
         spdlog::info("종료 중...");
         
         // 그레이스풀 종료
+		// 1. UDP 수신 중단
+		receiver.stop();
+		// 2. queue close
         queue.close();
+		// 3. Worker Pool stop
         worker_pool.stop();
-        
+
+		// 4. UPD thread join
         if (udp_thread.joinable()) {
             udp_thread.join();
         }
