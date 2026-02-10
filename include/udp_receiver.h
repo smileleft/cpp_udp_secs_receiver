@@ -47,13 +47,19 @@ public:
     }
 
     void stop() {
+        if (!running_) return;
+    
         running_ = false;
-        socket_.close();
+    
+        // 1. Pending async operation 취소
+        boost::system::error_code ec;
+        socket_.cancel(ec);
+    
+        // 2. 소켓 닫기
+        socket_.close(ec);
+    
+        // 3. io_context 중단 (run()이 반환됨)
         io_context_.stop();
-        
-        spdlog::info("UDP 수신 중단 (총 {}건, {} bytes)", 
-                     total_received_.load(), 
-                     total_bytes_.load());
     }
 
     uint64_t total_received() const { return total_received_.load(); }
@@ -86,7 +92,8 @@ private:
             // 다음 수신 대기
             start_receive();
         }
-        else if (ec) {
+        else if (ec && ec != boost::asio::error::operation_aborted) {
+            // operation_aborted는 정상 종료이므로 에러 로깅 안 함
             spdlog::error("UDP 수신 오류: {}", ec.message());
         }
     }
