@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
 		// 3. Worker Pool stop
         worker_pool.stop();
 
-		// 4. UPD thread join
+		// 4. UDP thread join
         if (udp_thread.joinable()) {
             udp_thread.join();
         }
