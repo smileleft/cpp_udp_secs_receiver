@@ -87,6 +87,79 @@ private:
         
         return parsed;
     }
+
+    // S6F11 파서
+    static std::shared_ptr<ParsedMessage> parse_s6f11(const json& msg) {
+        auto parsed = std::make_shared<S6F11Message>();
+        
+        // 공통 필드
+        ParsedMessage::extract_common(msg, *parsed);
+        
+        // Body 파싱
+        const json& body = msg["body"];
+        if (!body.is_object() || body["type"] != "L") {
+            return nullptr;
+        }
+        
+        const json& body_list = body["value"];
+        if (!body_list.is_array() || body_list.size() < 3) {
+            return nullptr;
+        }
+        
+        // L[0]: event_report_id (U2)
+        parsed->event_report_id = get_numeric(body_list[0]);
+        
+        // L[1]: event_id (U2)
+        parsed->event_id = get_numeric(body_list[1]);
+        
+        // L[2]: data_items (L)
+        const json& data_items_node = body_list[2];
+        if (data_items_node.is_object() && data_items_node["type"] == "L") {
+            const json& items = data_items_node["value"];
+            if (items.is_array()) {
+                // data_items를 JSON 배열로 변환
+                json data_array = json::array();
+                
+                for (const auto& item : items) {
+                    if (item.is_object() && item["type"] == "L") {
+                        const json& kv = item["value"];
+                        if (kv.is_array() && kv.size() >= 2) {
+                            std::string name = get_string(kv[0]);
+                            
+                            json item_obj = json::object();
+                            item_obj["name"] = name;
+                            
+                            // value는 타입에 따라 처리
+                            std::string val_type = kv[1].value("type", "");
+                            if (val_type == "A") {
+                                item_obj["value"] = get_string(kv[1]);
+                            } 
+                            else if (val_type.starts_with("U") || val_type.starts_with("I")) {
+                                item_obj["value"] = get_numeric(kv[1]);
+                            }
+                            else if (val_type.starts_with("F")) {
+                                // Float 처리
+                                if (kv[1].contains("value") && kv[1]["value"].is_array() && !kv[1]["value"].empty()) {
+                                    item_obj["value"] = kv[1]["value"][0].get<double>();
+                                } else {
+                                    item_obj["value"] = 0.0;
+                                }
+                            }
+                            else {
+                                item_obj["value"] = nullptr;
+                            }
+                            
+                            data_array.push_back(item_obj);
+                        }
+                    }
+                }
+                
+                parsed->data_items = data_array;
+            }
+        }
+        
+        return parsed;
+    }
     
     // 헬퍼 함수들
     static std::string get_string(const json& node) {
