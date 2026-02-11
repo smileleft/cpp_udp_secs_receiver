@@ -63,6 +63,17 @@ struct S2F49Message : public ParsedMessage {
     }
 };
 
+// S6F11 – Equipment Event Report
+struct S6F11Message : public ParsedMessage {
+    int event_report_id;
+    int event_id;
+    json data_items;  // JSONB 배열: [{"name":"TEMP","value":25.5}, ...]
+    
+    std::string table_name() const override {
+        return "s6f11_event_reports";
+    }
+};
+
 // 배치 처리용 컨테이너
 struct MessageBatch {
     std::vector<RawMessage> raw_messages;
