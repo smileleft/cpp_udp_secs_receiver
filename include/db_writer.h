@@ -172,6 +172,25 @@ private:
         );
     }
 
+    void insert_s6f11(pqxx::work& txn, const std::shared_ptr<S6F11Message>& msg, int raw_id) {
+        std::string query = 
+            "INSERT INTO s6f11_event_reports "
+            "(raw_message_id, timestamp, device_id, system_bytes, "
+            " event_report_id, event_id, data_items) "
+            "VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)";
+        
+        txn.exec_params(
+            query,
+            raw_id,
+            msg->timestamp,
+            msg->device_id,
+            msg->system_bytes,
+            msg->event_report_id,
+            msg->event_id,
+            msg->data_items.dump()
+        );
+    }
+
 private:
     const Config& config_;
     std::string conn_str_;
