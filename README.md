@@ -41,7 +41,11 @@ sudo apt-get install -y \
 # configure env
 export DB_HOST=localhost
 export DB_PASSWORD=secspass
-export WORKER_COUNT=4
+# for best performance
+export WORKER_COUNT=6
+export BATCH_SIZE=150
+export BATCH_TIMEOUT_MS=30
+export DB_POOL_SIZE=6
 
 # build
 cd cpp_udp_secs_receiver
