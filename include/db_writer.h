@@ -72,7 +72,49 @@ public:
 private:
     int insert_raw_message(pqxx::work& txn, const RawMessage& raw, 
                           const std::shared_ptr<ParsedMessage>& parsed) {
-        std::string raw_json(raw.bytes(), raw.bytes() + raw.size());
+        
+        // Raw JSON 파싱하여 timestamp 추출
+        std::string timestamp_val;
+        int stream_val = 0;
+        int function_val = 0;
+        bool wbit_val = false;
+        int device_id_val = 0;
+        std::string system_bytes_val;
+        std::string raw_body_str = "{}";
+        
+        try {
+            std::string raw_json(raw.bytes(), raw.bytes() + raw.size());
+            json msg = json::parse(raw_json);
+            
+            timestamp_val = msg.value("timestamp", "");
+            stream_val = msg.value("stream", 0);
+            function_val = msg.value("function", 0);
+            wbit_val = msg.value("wbit", false);
+            device_id_val = msg.value("deviceId", 0);
+            system_bytes_val = msg.value("systemBytes", "");
+            
+            if (msg.contains("body")) {
+                raw_body_str = msg["body"].dump();
+            }
+        }
+        catch (const json::exception& e) {
+            spdlog::warn("Raw JSON 파싱 실패 (timestamp 추출): {}", e.what());
+            // 파싱 실패 시 현재 시간 사용
+            auto now = std::chrono::system_clock::now();
+            auto time_t_now = std::chrono::system_clock::to_time_t(now);
+            std::stringstream ss;
+            ss << std::put_time(std::gmtime(&time_t_now), "%Y-%m-%dT%H:%M:%S");
+            timestamp_val = ss.str() + "Z";
+        }
+        
+        // timestamp가 비어있으면 현재 시간 사용
+        if (timestamp_val.empty()) {
+            auto now = std::chrono::system_clock::now();
+            auto time_t_now = std::chrono::system_clock::to_time_t(now);
+            std::stringstream ss;
+            ss << std::put_time(std::gmtime(&time_t_now), "%Y-%m-%dT%H:%M:%S");
+            timestamp_val = ss.str() + "Z";
+        }
         
         std::string query = 
             "INSERT INTO secs_raw_messages "
@@ -82,15 +124,15 @@ private:
         
         pqxx::result r = txn.exec_params(
             query,
-            parsed ? parsed->timestamp : "",
-            parsed ? parsed->stream : 0,
-            parsed ? parsed->function : 0,
-            false,  // wbit
-            parsed ? parsed->device_id : 0,
-            parsed ? parsed->system_bytes : "",
+            timestamp_val,
+            stream_val,
+            function_val,
+            wbit_val,
+            device_id_val,
+            system_bytes_val,
             0,  // ptype
             0,  // stype
-            parsed ? parsed->raw_body.dump() : "{}"
+            raw_body_str
         );
         
         return r[0][0].as<int>();
