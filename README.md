@@ -49,7 +49,7 @@ export DB_POOL_SIZE=6
 
 # build
 cd cpp_udp_secs_receiver
-chmod +x scripts/build.sh
+chmod 744 scripts/build.sh
 ./scripts/build.sh
 ```
 
